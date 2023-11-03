@@ -1,8 +1,9 @@
-import React from 'react';
+import {useEffect} from 'react';
 import CartItem from '../Cartitem';
 import Auth from '../../utils/auth';
+import { TOGGLE_CART, ADD_MULTIPLE_TO_CART } from "../../utils/actions";
+import { idbPromise } from "../../utils/helpers";
 import { useStoreContext } from '../../utils/GlobalState';
-import { TOGGLE_CART } from '../../utils/actions';
 import './style.css';
 
 const Cart = () => {
@@ -11,6 +12,20 @@ const Cart = () => {
   const [state, dispatch] = useStoreContext();
 
   console.log('ADD to Cart state:', state)
+  
+  useEffect(() => {
+    async function getCart() {
+      const cart = await idbPromise('cart', 'get');
+      dispatch({ type: ADD_MULTIPLE_TO_CART, products: [...cart] });
+    };
+    
+    // ensures cart items remain in cart after user leaves page and returns
+    if (!state.cart.length) {
+      getCart();
+    }
+  }, [state.cart.length, dispatch]);
+
+
 
   function toggleCart() {
 

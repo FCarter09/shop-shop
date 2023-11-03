@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStoreContext } from '../../utils/GlobalState';
 import { REMOVE_FROM_CART, UPDATE_CART_QUANTITY } from '../../utils/actions';
+import { idbPromise } from "../../utils/helpers";
 
 const CartItem = ({ item }) => {
 
@@ -12,6 +13,7 @@ const CartItem = ({ item }) => {
         type: REMOVE_FROM_CART,
         _id: item._id
       });
+      idbPromise('cart', 'delete', { ...item });
     };
 
     // allow users to manually edit the quantity of shopping cart items by typing directly in the input field 
@@ -23,12 +25,16 @@ const CartItem = ({ item }) => {
             type: REMOVE_FROM_CART,
             _id: item._id
           });
+          // deletes item from global state and object store so it will persist when offline
+          idbPromise('cart', 'delete', { ...item });
         } else { // user enters any number greater than 0 then add the value in the quantity input field
           dispatch({
             type: UPDATE_CART_QUANTITY, 
             _id: item._id,
             purchaseQuantity: parseInt(value)
           });
+          //updates item quantity in global state and object store so updated quantity will persist when offline
+          idbPromise('cart', 'put', { ...item, purchaseQuantity: parseInt(value) });
         }
       };
 

@@ -11,6 +11,7 @@ import { UPDATE_PRODUCTS,
          ADD_TO_CART,
 } from "../utils/actions";
 import Cart from '../components/Cart';
+import { idbPromise } from "../utils/helpers";
 
 function Detail() {
 
@@ -28,15 +29,32 @@ function Detail() {
 
 
   useEffect(() => {
+    // already in global store
     if (products.length) {
       setCurrentProduct(products.find(product => product._id === id));
+      //retrieve from server
     } else if (data) {
       dispatch({
         type: UPDATE_PRODUCTS,
         products: data.products
       });
+
+      data.products.forEach((product) => {
+        idbPromise('products', 'put', product);
+      });
+    }  
+    // get cache from idb
+    else if (!loading) {
+      idbPromise('products', 'get').then((indexedProducts) => {
+        dispatch({
+          type: UPDATE_PRODUCTS,
+          products: indexedProducts
+        });
+      });
     }
-  }, [products, data, dispatch, id]);
+    
+  }, [products, data,loading, dispatch, id]);
+
 
 
   const addToCart = () => {
@@ -50,12 +68,19 @@ function Detail() {
         _id: id,
         purchaseQuantity: parseInt(itemInCart.purchaseQuantity) + 1
       });
+       // if we're updating quantity, use existing item data and increment purchaseQuantity value by one
+      idbPromise('cart', 'put', {
+        ...itemInCart,
+        purchaseQuantity: parseInt(itemInCart.purchaseQuantity) + 1
+      });
     } else { // if the item doesn't already exist then just add item to cart
     dispatch({ 
         type: ADD_TO_CART,
         product: { ...currentProduct, purchaseQuantity: 1 }
       });
-    } 
+       // if product isn't in the cart yet, add it to the current shopping cart in IndexedDB
+      idbPromise('cart', 'put', { ...currentProduct, purchaseQuantity: 1 });
+      } 
   };
 
   // remove item from cart
@@ -64,7 +89,9 @@ function Detail() {
       type: REMOVE_FROM_CART,
       _id: currentProduct._id
     });
-  };
+    // upon removal from cart, delete the item from IndexedDB using the `currentProduct._id` to locate what to remove
+    idbPromise('cart', 'delete', { ...currentProduct });
+    };
 
   return (
     <>
